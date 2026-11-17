@@ -1,0 +1,32 @@
+# Nome do workflow
+name: CI/CD
+
+# Roda a cada push
+on: push
+
+jobs:
+  # Etapa 1: rodar os testes
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # baixa o código
+      - uses: actions/setup-python@v5      # instala o Python
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest
+
+  # Etapa 2: só roda se os testes passarem
+  publicar:
+    needs: testar
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write                      # permite publicar no GHCR
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login no GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build da imagem
+        run: docker build -t ghcr.io/teuzz77/app-cicd:latest .
+      - name: Publicar imagem
+        run: docker push ghcr.io/teuzz77/app-cicd:latest
